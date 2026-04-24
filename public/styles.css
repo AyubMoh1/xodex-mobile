@@ -22,8 +22,9 @@
 
 html,
 body {
+  height: 100%;
   margin: 0;
-  min-height: 100vh;
+  min-height: 100%;
   background: var(--bg);
 }
 
@@ -49,6 +50,11 @@ button {
   display: grid;
   grid-template-rows: auto 1fr;
   height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  width: 100%;
 }
 
 .topbar {
@@ -95,13 +101,17 @@ button {
 .workspace {
   display: grid;
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .threads-pane,
 .thread-pane {
+  height: 100%;
   min-height: 0;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .threads-pane {
@@ -392,6 +402,12 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
+  inset: 0;
+  margin: auto;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 18px;
+  position: fixed;
   width: min(92vw, 360px);
 }
 
@@ -424,13 +440,18 @@ textarea:focus {
 
   .workspace {
     display: block;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
     position: relative;
   }
 
   .threads-pane,
   .thread-pane {
+    height: 100%;
     inset: 0;
     position: absolute;
+    width: 100%;
   }
 
   .thread-pane {
@@ -443,6 +464,10 @@ textarea:focus {
 
   .workspace.show-thread .thread-pane {
     display: block;
+  }
+
+  .thread-pane {
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
   }
 
   .mobile-only {
