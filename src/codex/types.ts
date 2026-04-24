@@ -60,6 +60,7 @@ export type CompanionStatus = {
 
 export type ThreadRuntime = {
   thread: CodexThread;
+  isLoaded: boolean;
   activeTurnId: string | null;
   items: CodexItem[];
   latestOutput: string;
@@ -71,5 +72,6 @@ export type ThreadRuntime = {
 export type CompanionSnapshot = {
   status: CompanionStatus;
   threads: ThreadRuntime[];
+  loadedThreadIds: string[];
   pendingApprovals: PendingServerRequest[];
 };

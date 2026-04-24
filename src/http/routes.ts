@@ -24,6 +24,11 @@ export function createApiRouter(bridge: CodexAppServerClient, state: CompanionSt
     res.json(response);
   }));
 
+  router.get("/threads/loaded", asyncHandler(async (_req, res) => {
+    const response = await bridge.listLoadedThreads();
+    res.json(response);
+  }));
+
   router.post("/threads", asyncHandler(async (req, res) => {
     const response = await bridge.startThread(req.body ?? {});
     res.status(201).json(response);

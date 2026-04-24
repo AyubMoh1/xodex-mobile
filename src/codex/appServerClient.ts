@@ -94,6 +94,23 @@ export class CodexAppServerClient extends EventEmitter {
     });
     const threads = getDataArray<CodexThread>(response);
     this.state.setThreads(threads);
+    await this.listLoadedThreads();
+    return response;
+  }
+
+  async listLoadedThreads() {
+    await this.start();
+    const response = await this.request("thread/loaded/list", { limit: 100 });
+    const threadIds = getDataArray<string>(response).filter((threadId) => typeof threadId === "string");
+    this.state.setLoadedThreadIds(threadIds);
+
+    for (const threadId of threadIds) {
+      const runtime = this.state.getThread(threadId);
+      if (!runtime?.thread.preview && !runtime?.thread.cwd) {
+        await this.readThread(threadId);
+      }
+    }
+
     return response;
   }
 
