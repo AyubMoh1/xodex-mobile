@@ -5,6 +5,8 @@ const state = {
   events: null,
 };
 
+const APP_MARKER = "sidebar-v2";
+
 const els = {
   workspace: document.querySelector("#workspace"),
   backButton: document.querySelector("#backButton"),
@@ -165,7 +167,9 @@ function render() {
 
   const status = state.snapshot.status;
   const statusLine = status.codex === "ready" ? "Ready" : titleCase(status.codex);
-  setStatus(status.message ? `${statusLine}: ${truncate(status.message, 80)}` : statusLine);
+  const threadCount = state.snapshot.threads?.length ?? 0;
+  const marker = `${APP_MARKER} · ${threadCount} threads`;
+  setStatus(status.message ? `${statusLine}: ${truncate(status.message, 58)} · ${marker}` : `${statusLine} · ${marker}`);
   renderThreads();
   renderSelectedThread();
 }
@@ -175,10 +179,7 @@ function renderThreads() {
   els.threadList.replaceChildren();
 
   if (threads.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "muted";
-    empty.textContent = "No Codex threads yet.";
-    els.threadList.append(empty);
+    els.threadList.append(createEmptyNotice("No Codex threads returned", "Check that Codex Desktop/CLI has local threads and that this server was restarted after git pull."));
     return;
   }
 
@@ -213,6 +214,10 @@ function renderThreads() {
 
   if (chats.length > 0) {
     renderThreadSection("Chats", chats, { showProject: false });
+  }
+
+  if (!els.threadList.children.length) {
+    els.threadList.append(createEmptyNotice("No visible groups", `${threads.length} threads were returned, but none matched the sidebar grouping rules.`));
   }
 }
 
@@ -389,6 +394,20 @@ function createSection(title) {
 
   section.append(heading);
   return section;
+}
+
+function createEmptyNotice(title, detail) {
+  const notice = document.createElement("div");
+  notice.className = "empty-notice";
+
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+
+  const body = document.createElement("span");
+  body.textContent = detail;
+
+  notice.append(heading, body);
+  return notice;
 }
 
 function createThreadButton(runtime, options = {}) {

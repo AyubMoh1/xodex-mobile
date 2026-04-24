@@ -260,6 +260,25 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.empty-notice {
+  background: rgba(243, 240, 232, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.empty-notice strong {
+  font-size: 0.9rem;
+}
+
+.empty-notice span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .thread-card {
   background: transparent;
   border: 1px solid transparent;
