@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Local editor and Codex desktop metadata.
+.vscode/
+.mcp.json
