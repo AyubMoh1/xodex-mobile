@@ -51,5 +51,6 @@ if (process.env.NODE_ENV !== "test") {
 
   app.listen(config.port, config.host, () => {
     console.log(`xodex-mobile listening on http://${config.host}:${config.port}`);
+    console.log(`using Codex binary: ${config.codexBin}`);
   });
 }
