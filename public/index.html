@@ -3,17 +3,104 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#121712" />
+    <meta name="theme-color" content="#101312" />
     <title>Xodex Mobile</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101312'/%3E%3Cpath d='M16 40 30 14h16L32 40h16l-8 10H16z' fill='%2357c985'/%3E%3C/svg%3E"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="shell">
-      <section class="panel">
-        <p class="eyebrow">Xodex Mobile</p>
-        <h1>Codex from your phone.</h1>
-        <p class="copy">The mobile client shell is ready. Codex thread controls land in the next PR.</p>
-      </section>
-    </main>
+    <div class="app-shell">
+      <header class="topbar">
+        <button id="backButton" class="icon-button mobile-only" type="button" aria-label="Back" hidden>
+          Back
+        </button>
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <div>
+            <strong>Xodex Mobile</strong>
+            <span id="statusText">Starting</span>
+          </div>
+        </div>
+        <button id="refreshButton" class="plain-button" type="button">Refresh</button>
+      </header>
+
+      <main class="workspace" id="workspace">
+        <aside class="threads-pane" id="threadsPane" aria-label="Threads">
+          <div class="pane-heading">
+            <div>
+              <p class="eyebrow">Threads</p>
+              <h1>Continue Codex</h1>
+            </div>
+            <button id="newThreadButton" class="plain-button" type="button">New</button>
+          </div>
+          <label class="field">
+            <span>Project path</span>
+            <input id="cwdInput" type="text" autocomplete="off" placeholder="/Users/you/project" />
+          </label>
+          <div class="thread-list" id="threadList"></div>
+        </aside>
+
+        <section class="thread-pane" id="threadPane" aria-label="Current thread">
+          <div class="empty-state" id="emptyState">
+            <p>Select a thread to continue from your phone.</p>
+          </div>
+
+          <article class="thread-view" id="threadView" hidden>
+            <div class="thread-header">
+              <div>
+                <p class="eyebrow" id="threadCwd"></p>
+                <h2 id="threadTitle"></h2>
+              </div>
+              <div class="thread-actions">
+                <span class="status-pill" id="threadStatus"></span>
+                <button id="stopButton" class="danger-button" type="button">Stop</button>
+              </div>
+            </div>
+
+            <div class="approval-stack" id="approvalStack"></div>
+
+            <section class="summary-grid">
+              <div class="info-panel">
+                <div class="panel-title">Changed files</div>
+                <ul class="file-list" id="changedFiles"></ul>
+              </div>
+              <div class="info-panel">
+                <div class="panel-title">Latest output</div>
+                <pre class="latest-output" id="latestOutput"></pre>
+              </div>
+            </section>
+
+            <div class="item-stream" id="itemStream"></div>
+
+            <form class="composer" id="composer">
+              <textarea
+                id="messageInput"
+                rows="3"
+                placeholder="Send a new turn or steer the active one"
+              ></textarea>
+              <div class="composer-row">
+                <span id="composerHint">Ready</span>
+                <button class="send-button" type="submit">Send</button>
+              </div>
+            </form>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="token-dialog" id="tokenDialog">
+      <form method="dialog" id="tokenForm">
+        <h2>Access token</h2>
+        <p>This server is protected. Enter the token from your Mac.</p>
+        <input type="text" autocomplete="username" value="xodex-mobile" hidden />
+        <input id="tokenInput" type="password" autocomplete="current-password" />
+        <button class="send-button" type="submit">Unlock</button>
+      </form>
+    </dialog>
+
+    <script src="/app.js" type="module"></script>
   </body>
 </html>
