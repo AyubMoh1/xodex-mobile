@@ -182,23 +182,37 @@ function renderThreads() {
     return;
   }
 
-  for (const runtime of threads) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `thread-card${runtime.thread.id === state.selectedThreadId ? " active" : ""}`;
-    button.addEventListener("click", () => selectThread(runtime.thread.id));
+  const loaded = threads.filter((runtime) => isOpenRuntime(runtime));
+  const loadedIds = new Set(loaded.map((runtime) => runtime.thread.id));
+  const rest = threads.filter((runtime) => !loadedIds.has(runtime.thread.id));
+  const projectGroups = groupProjectThreads(rest.filter((runtime) => !isChatRuntime(runtime)));
+  const chats = rest.filter((runtime) => isChatRuntime(runtime));
 
-    const title = document.createElement("strong");
-    title.textContent = threadTitle(runtime.thread);
+  if (loaded.length > 0) {
+    renderThreadSection("Open threads", loaded, { showProject: true });
+  }
 
-    const meta = document.createElement("span");
-    meta.textContent = `${formatThreadStatus(runtime)} · ${formatDate(runtime.thread.updatedAt)}`;
+  if (projectGroups.length > 0) {
+    const section = createSection("Projects");
+    for (const group of projectGroups) {
+      const project = document.createElement("div");
+      project.className = "project-group";
 
-    const cwd = document.createElement("span");
-    cwd.textContent = runtime.thread.cwd || "No cwd";
+      const title = document.createElement("div");
+      title.className = "project-title";
+      title.textContent = group.name;
 
-    button.append(title, meta, cwd);
-    els.threadList.append(button);
+      project.append(title);
+      for (const runtime of group.threads) {
+        project.append(createThreadButton(runtime));
+      }
+      section.append(project);
+    }
+    els.threadList.append(section);
+  }
+
+  if (chats.length > 0) {
+    renderThreadSection("Chats", chats, { showProject: false });
   }
 }
 
@@ -357,6 +371,87 @@ function threadTitle(thread) {
   return thread.name || truncate(thread.preview || thread.id, 72);
 }
 
+function renderThreadSection(title, runtimes, options = {}) {
+  const section = createSection(title);
+  for (const runtime of runtimes) {
+    section.append(createThreadButton(runtime, options));
+  }
+  els.threadList.append(section);
+}
+
+function createSection(title) {
+  const section = document.createElement("section");
+  section.className = "thread-section";
+
+  const heading = document.createElement("div");
+  heading.className = "section-heading";
+  heading.textContent = title;
+
+  section.append(heading);
+  return section;
+}
+
+function createThreadButton(runtime, options = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `thread-card${runtime.thread.id === state.selectedThreadId ? " active" : ""}`;
+  if (runtime.isLoaded) button.classList.add("loaded");
+  button.addEventListener("click", () => selectThread(runtime.thread.id));
+
+  const top = document.createElement("div");
+  top.className = "thread-card-top";
+
+  const title = document.createElement("strong");
+  title.textContent = threadTitle(runtime.thread);
+
+  const age = document.createElement("span");
+  age.className = "thread-age";
+  age.textContent = formatAge(runtime.thread.updatedAt);
+
+  top.append(title, age);
+
+  const meta = document.createElement("span");
+  const project = projectNameFromCwd(runtime.thread.cwd);
+  const status = formatThreadStatus(runtime);
+  meta.textContent = options.showProject && project ? `${project} · ${status}` : status;
+
+  button.append(top, meta);
+  return button;
+}
+
+function groupProjectThreads(runtimes) {
+  const groups = new Map();
+
+  for (const runtime of runtimes) {
+    const key = runtime.thread.cwd || "No project";
+    const name = projectNameFromCwd(runtime.thread.cwd) || "No project";
+    const group = groups.get(key) ?? { name, threads: [] };
+    group.threads.push(runtime);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values()).sort((a, b) => {
+    const aUpdated = Math.max(...a.threads.map((runtime) => Number(runtime.thread.updatedAt ?? 0)));
+    const bUpdated = Math.max(...b.threads.map((runtime) => Number(runtime.thread.updatedAt ?? 0)));
+    return bUpdated - aUpdated;
+  });
+}
+
+function isOpenRuntime(runtime) {
+  return runtime.isLoaded || Boolean(runtime.activeTurnId) || runtime.pendingApprovals.length > 0;
+}
+
+function isChatRuntime(runtime) {
+  const cwd = runtime.thread.cwd;
+  return !cwd || cwd.includes("/Documents/Codex/");
+}
+
+function projectNameFromCwd(cwd) {
+  if (!cwd) return "";
+  const parts = cwd.split("/").filter(Boolean);
+  return parts[parts.length - 1] || cwd;
+}
+
 function formatThreadStatus(runtime) {
   const status = runtime.thread.status;
   if (runtime.pendingApprovals.length > 0) return "waiting approval";
@@ -375,6 +470,21 @@ function formatDate(seconds) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(seconds * 1000));
+}
+
+function formatAge(seconds) {
+  if (!seconds) return "";
+  const deltaSeconds = Math.max(0, Math.floor((Date.now() - seconds * 1000) / 1000));
+  const minute = 60;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const week = 7 * day;
+
+  if (deltaSeconds < minute) return "now";
+  if (deltaSeconds < hour) return `${Math.floor(deltaSeconds / minute)}m`;
+  if (deltaSeconds < day) return `${Math.floor(deltaSeconds / hour)}h`;
+  if (deltaSeconds < week) return `${Math.floor(deltaSeconds / day)}d`;
+  return `${Math.floor(deltaSeconds / week)}w`;
 }
 
 function approvalTitle(approval) {

@@ -9,7 +9,7 @@ import type {
   ThreadRuntime,
 } from "./types.js";
 
-type ThreadMutableRuntime = ThreadRuntime & {
+type ThreadMutableRuntime = Omit<ThreadRuntime, "isLoaded"> & {
   itemMap: Map<string, CodexItem>;
 };
 
@@ -22,6 +22,7 @@ const emptyStatus: CompanionStatus = {
 export class CompanionState extends EventEmitter {
   private readonly threads = new Map<string, ThreadMutableRuntime>();
   private readonly pendingRequests = new Map<string, PendingServerRequest>();
+  private readonly loadedThreadIds = new Set<string>();
   private status: CompanionStatus = { ...emptyStatus };
 
   setStatus(status: Partial<CompanionStatus>) {
@@ -57,6 +58,17 @@ export class CompanionState extends EventEmitter {
     for (const thread of threads) {
       this.upsertThread(thread);
     }
+  }
+
+  setLoadedThreadIds(threadIds: string[]) {
+    this.loadedThreadIds.clear();
+
+    for (const threadId of threadIds) {
+      this.loadedThreadIds.add(threadId);
+      this.ensureThread(threadId);
+    }
+
+    this.emitChange("loadedThreads", threadIds);
   }
 
   updateThreadStatus(threadId: string, status: unknown) {
@@ -176,13 +188,17 @@ export class CompanionState extends EventEmitter {
   listThreads() {
     return Array.from(this.threads.values())
       .map((runtime) => this.toRuntime(runtime))
-      .sort((a, b) => Number(b.thread.updatedAt ?? 0) - Number(a.thread.updatedAt ?? 0));
+      .sort((a, b) => {
+        if (a.isLoaded !== b.isLoaded) return a.isLoaded ? -1 : 1;
+        return Number(b.thread.updatedAt ?? 0) - Number(a.thread.updatedAt ?? 0);
+      });
   }
 
   snapshot(): CompanionSnapshot {
     return {
       status: this.status,
       threads: this.listThreads(),
+      loadedThreadIds: Array.from(this.loadedThreadIds),
       pendingApprovals: Array.from(this.pendingRequests.values()),
     };
   }
@@ -218,6 +234,7 @@ export class CompanionState extends EventEmitter {
   private toRuntime(runtime: ThreadMutableRuntime): ThreadRuntime {
     return {
       thread: runtime.thread,
+      isLoaded: this.loadedThreadIds.has(runtime.thread.id),
       activeTurnId: runtime.activeTurnId,
       items: runtime.items,
       latestOutput: runtime.latestOutput,
