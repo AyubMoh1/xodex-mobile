@@ -51,9 +51,13 @@ export class CodexAppServerClient extends EventEmitter {
     rl.on("line", (line) => this.handleLine(line));
 
     this.process.stderr.on("data", (chunk: Buffer) => {
-      const message = chunk.toString("utf8").trim();
-      if (message) {
-        this.state.setStatus({ message });
+      for (const line of chunk.toString("utf8").split("\n")) {
+        const message = parseCodexLogMessage(line);
+        if (!message) continue;
+
+        if (this.state.getStatus().codex !== "ready" || message.level === "ERROR") {
+          this.state.setStatus({ message: message.text });
+        }
       }
     });
 
@@ -356,6 +360,23 @@ export class CodexAppServerClient extends EventEmitter {
 
 function isResponse(message: JsonRpcMessage): message is JsonRpcResponse {
   return "id" in message && ("result" in message || "error" in message) && !("method" in message);
+}
+
+function parseCodexLogMessage(line: string) {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = JSON.parse(trimmed) as JsonObject;
+    const fields = parsed.fields && typeof parsed.fields === "object" ? parsed.fields : {};
+    const message = (fields as JsonObject).message;
+    return {
+      level: typeof parsed.level === "string" ? parsed.level : "INFO",
+      text: typeof message === "string" ? message : trimmed,
+    };
+  } catch {
+    return { level: "INFO", text: trimmed };
+  }
 }
 
 function isServerRequest(message: JsonRpcMessage): message is JsonRpcRequest {

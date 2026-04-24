@@ -46,6 +46,7 @@ export class CompanionState extends EventEmitter {
       runtime.items = items;
       runtime.itemMap = new Map(items.map((item) => [item.id, item]));
       runtime.latestOutput = deriveLatestOutput(items);
+      runtime.changedFiles = mergeUnique(runtime.changedFiles, deriveChangedFilesFromItems(items));
     }
 
     this.emitChange("thread", this.toRuntime(runtime));
@@ -291,6 +292,20 @@ function extractFilesFromChanges(changes: unknown[]) {
   }
 
   return Array.from(files);
+}
+
+function deriveChangedFilesFromItems(items: CodexItem[]) {
+  return items.flatMap((item) => {
+    if (item.type !== "fileChange" || !Array.isArray(item.changes)) {
+      return [];
+    }
+
+    return extractFilesFromChanges(item.changes);
+  });
+}
+
+function mergeUnique(first: string[], second: string[]) {
+  return Array.from(new Set([...first, ...second]));
 }
 
 function getThreadId(params: unknown) {
