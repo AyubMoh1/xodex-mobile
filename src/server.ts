@@ -24,7 +24,15 @@ export function createApp(options: CreateAppOptions = {}) {
 
   app.disable("x-powered-by");
   app.use(express.json({ limit: "1mb" }));
-  app.use(express.static(path.join(projectRoot, "public")));
+  app.use(
+    express.static(path.join(projectRoot, "public"), {
+      etag: false,
+      lastModified: false,
+      setHeaders(res) {
+        res.setHeader("Cache-Control", "no-store");
+      },
+    }),
+  );
   app.use("/api", requireAccessToken(config.accessToken), createApiRouter(bridge, state));
 
   return app;
