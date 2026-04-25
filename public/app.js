@@ -5,7 +5,7 @@ const state = {
   events: null,
 };
 
-const APP_MARKER = "mobile-v5";
+const APP_MARKER = "mobile-v6";
 
 const els = {
   workspace: document.querySelector("#workspace"),
@@ -322,7 +322,7 @@ function renderItems(items) {
 
     const body = document.createElement("div");
     body.className = "message-body";
-    body.textContent = itemText(item);
+    renderMarkdown(body, itemText(item));
 
     card.append(meta, body);
     els.itemStream.append(card);
@@ -576,6 +576,190 @@ function summarizeToolOutput(output) {
   }
 
   return `Output: ${truncate(normalized, 900)}`;
+}
+
+function renderMarkdown(container, source) {
+  const text = normalizeMarkdown(source);
+  const blocks = markdownBlocks(text);
+
+  container.replaceChildren();
+
+  for (const block of blocks) {
+    if (block.type === "code") {
+      const pre = document.createElement("pre");
+      const code = document.createElement("code");
+      code.textContent = block.text;
+      pre.append(code);
+      container.append(pre);
+      continue;
+    }
+
+    const lines = block.text.split("\n").filter((line) => line.trim().length > 0);
+    if (lines.length === 0) continue;
+
+    if (lines.every((line) => /^\s*[-*]\s+/.test(line))) {
+      const list = document.createElement("ul");
+      for (const line of lines) {
+        const item = document.createElement("li");
+        renderInline(item, line.replace(/^\s*[-*]\s+/, ""));
+        list.append(item);
+      }
+      container.append(list);
+      continue;
+    }
+
+    if (lines.every((line) => /^\s*\d+\.\s+/.test(line))) {
+      const list = document.createElement("ol");
+      for (const line of lines) {
+        const item = document.createElement("li");
+        renderInline(item, line.replace(/^\s*\d+\.\s+/, ""));
+        list.append(item);
+      }
+      container.append(list);
+      continue;
+    }
+
+    if (lines.every((line) => /^\s*>\s?/.test(line))) {
+      const quote = document.createElement("blockquote");
+      renderInline(quote, lines.map((line) => line.replace(/^\s*>\s?/, "")).join("\n"));
+      container.append(quote);
+      continue;
+    }
+
+    const paragraph = document.createElement("p");
+    renderInline(paragraph, lines.join("\n"));
+    container.append(paragraph);
+  }
+}
+
+function markdownBlocks(source) {
+  const blocks = [];
+  const pending = [];
+  const code = [];
+  let inCode = false;
+
+  const flushPending = () => {
+    if (pending.length > 0) {
+      blocks.push({ type: "text", text: pending.join("\n") });
+      pending.length = 0;
+    }
+  };
+
+  const flushCode = () => {
+    blocks.push({ type: "code", text: code.join("\n").trimEnd() });
+    code.length = 0;
+  };
+
+  for (const line of source.split("\n")) {
+    if (/^\s*```/.test(line)) {
+      if (inCode) {
+        flushCode();
+        inCode = false;
+      } else {
+        flushPending();
+        inCode = true;
+      }
+      continue;
+    }
+
+    if (inCode) {
+      code.push(line);
+      continue;
+    }
+
+    if (line.trim().length === 0) {
+      flushPending();
+      continue;
+    }
+
+    if (pending.length > 0 && lineKind(pending[pending.length - 1]) !== lineKind(line)) {
+      flushPending();
+    }
+
+    pending.push(line);
+  }
+
+  if (inCode) flushCode();
+  flushPending();
+
+  return blocks;
+}
+
+function lineKind(line) {
+  if (/^\s*[-*]\s+/.test(line)) return "ul";
+  if (/^\s*\d+\.\s+/.test(line)) return "ol";
+  if (/^\s*>\s?/.test(line)) return "quote";
+  return "text";
+}
+
+function renderInline(parent, source) {
+  const pattern = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)|`([^`\n]+)`|\*\*([^*\n]+)\*\*|(https?:\/\/[^\s<>()]+)/g;
+  let cursor = 0;
+
+  for (const match of source.matchAll(pattern)) {
+    appendText(parent, source.slice(cursor, match.index));
+
+    if (match[1] && match[2]) {
+      parent.append(createLink(match[2], match[1]));
+    } else if (match[3]) {
+      const code = document.createElement("code");
+      code.textContent = match[3];
+      parent.append(code);
+    } else if (match[4]) {
+      const strong = document.createElement("strong");
+      strong.textContent = match[4];
+      parent.append(strong);
+    } else if (match[5]) {
+      const [url, trailing] = splitTrailingPunctuation(match[5]);
+      parent.append(createLink(url, shortUrl(url)));
+      appendText(parent, trailing);
+    }
+
+    cursor = match.index + match[0].length;
+  }
+
+  appendText(parent, source.slice(cursor));
+}
+
+function createLink(url, label) {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noreferrer";
+  anchor.textContent = label;
+  return anchor;
+}
+
+function appendText(parent, value) {
+  if (!value) return;
+  parent.append(document.createTextNode(value));
+}
+
+function normalizeMarkdown(source) {
+  return String(source || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\[([^\]\n]+)\]\s*\n\s*\((https?:\/\/[^)\s]+)\)/g, "[$1]($2)")
+    .replace(/(^|[^\]])\((https?:\/\/[^)\s]+)\)/g, "$1$2")
+    .trim();
+}
+
+function splitTrailingPunctuation(url) {
+  const match = url.match(/^(.+?)([.,;:!?]+)?$/);
+  return [match?.[1] || url, match?.[2] || ""];
+}
+
+function shortUrl(value) {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "");
+    const segments = url.pathname.split("/").filter(Boolean);
+    const path = segments.length > 0
+      ? `/${segments.slice(0, 2).join("/")}${segments.length > 2 ? "/..." : ""}`
+      : "";
+    return `${host}${path}${url.search ? "?..." : ""}`;
+  } catch {
+    return value;
+  }
 }
 
 function truncate(text, length) {
