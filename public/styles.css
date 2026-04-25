@@ -28,6 +28,7 @@ body {
   min-height: 100%;
   background: var(--bg);
   width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -344,11 +345,14 @@ textarea:focus {
 }
 
 .thread-view {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   margin: 0 auto;
   max-width: 980px;
   min-height: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .status-pill {
@@ -362,7 +366,7 @@ textarea:focus {
 }
 
 .summary-grid {
-  display: grid;
+  display: none;
   gap: 12px;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
 }
@@ -374,6 +378,7 @@ textarea:focus {
   background: rgba(24, 29, 26, 0.92);
   border: 1px solid var(--line);
   border-radius: 8px;
+  min-width: 0;
 }
 
 .info-panel {
@@ -404,13 +409,16 @@ textarea:focus {
   line-height: 1.45;
   margin: 10px 0 0;
   max-height: 180px;
-  overflow: auto;
+  overflow: hidden auto;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .approval-stack,
 .item-stream {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
@@ -419,22 +427,22 @@ textarea:focus {
   padding: 12px;
 }
 
-.approval-card h3,
-.item-card h3 {
+.approval-card h3 {
   font-size: 0.86rem;
   margin: 0 0 8px;
 }
 
-.approval-card pre,
-.item-card pre {
+.approval-card pre {
   color: #dce5da;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.78rem;
   line-height: 1.45;
   margin: 8px 0;
   max-height: 260px;
-  overflow: auto;
+  overflow: hidden auto;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .approval-actions {
@@ -445,14 +453,20 @@ textarea:focus {
 }
 
 .item-card {
-  padding: 12px;
+  align-self: flex-start;
+  padding: 11px 13px;
+  max-width: min(78%, 760px);
 }
 
 .item-card[data-type="userMessage"] {
+  align-self: flex-end;
+  background: rgba(31, 42, 51, 0.92);
   border-color: rgba(106, 165, 255, 0.3);
 }
 
-.item-card[data-type="agentMessage"] {
+.item-card[data-type="agentMessage"],
+.item-card[data-type="plan"] {
+  background: rgba(24, 29, 26, 0.92);
   border-color: rgba(87, 201, 133, 0.28);
 }
 
@@ -460,7 +474,16 @@ textarea:focus {
   color: var(--muted);
   font-size: 0.72rem;
   margin-bottom: 6px;
-  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.message-body {
+  color: #eef3eb;
+  font-size: 0.92rem;
+  line-height: 1.48;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .composer {
@@ -520,27 +543,27 @@ textarea:focus {
   }
 
   .topbar {
-    gap: 14px;
-    min-height: 78px;
-    padding: max(16px, env(safe-area-inset-top)) 18px 14px;
+    gap: 8px;
+    min-height: 54px;
+    padding: max(8px, env(safe-area-inset-top)) 10px 8px;
   }
 
   .brand {
-    gap: 12px;
+    gap: 10px;
   }
 
   .brand-mark {
-    border-radius: 10px;
-    height: 40px;
-    width: 40px;
+    border-radius: 8px;
+    height: 30px;
+    width: 30px;
   }
 
   .brand strong {
-    font-size: 1.16rem;
+    font-size: 1rem;
   }
 
   .brand span:last-child {
-    font-size: 0.9rem;
+    display: none;
   }
 
   .plain-button,
@@ -548,9 +571,20 @@ textarea:focus {
   .danger-button,
   .icon-button {
     border-radius: 10px;
-    font-size: 1.05rem;
-    min-height: 50px;
-    padding: 0 18px;
+    font-size: 0.98rem;
+    min-height: 42px;
+    padding: 0 14px;
+  }
+
+  #refreshButton {
+    display: none;
+  }
+
+  #backButton {
+    flex: 0 0 auto;
+    font-size: 0.88rem;
+    min-height: 36px;
+    padding: 0 11px;
   }
 
   .workspace {
@@ -668,22 +702,92 @@ textarea:focus {
 
   .thread-pane {
     padding-bottom: max(18px, env(safe-area-inset-bottom));
+    overflow: hidden;
+    padding: 10px 10px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .thread-view {
+    gap: 8px;
+    height: 100%;
+    max-width: none;
+    min-height: 0;
+    width: 100%;
   }
 
   .mobile-only {
     display: inline-flex;
   }
 
-  .summary-grid {
-    grid-template-columns: 1fr;
+  .thread-header {
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    flex-direction: row;
+    gap: 8px;
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding-bottom: 8px;
   }
 
-  .thread-header {
-    align-items: flex-start;
-    flex-direction: column;
+  .thread-header > div:first-child {
+    min-width: 0;
   }
 
   .thread-actions {
-    width: 100%;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .thread-header .eyebrow,
+  .status-pill {
+    display: none;
+  }
+
+  .thread-header h2 {
+    font-size: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .approval-stack {
+    flex: 0 0 auto;
+  }
+
+  .item-stream {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden auto;
+    padding: 4px 1px 10px;
+  }
+
+  .item-card {
+    max-width: 88%;
+    padding: 10px 12px;
+  }
+
+  .item-meta {
+    font-size: 0.7rem;
+  }
+
+  .message-body {
+    font-size: 0.96rem;
+    line-height: 1.46;
+  }
+
+  .approval-card pre {
+    font-size: 0.76rem;
+    max-height: 170px;
+  }
+
+  .composer {
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 10px;
+    position: relative;
+  }
+
+  textarea {
+    min-height: 70px;
+    resize: none;
   }
 }

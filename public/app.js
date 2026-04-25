@@ -5,7 +5,7 @@ const state = {
   events: null,
 };
 
-const APP_MARKER = "mobile-v3";
+const APP_MARKER = "mobile-v5";
 
 const els = {
   workspace: document.querySelector("#workspace"),
@@ -235,6 +235,7 @@ function renderSelectedThread() {
   els.threadCwd.textContent = runtime.thread.cwd || "Project";
   els.threadStatus.textContent = formatThreadStatus(runtime);
   els.stopButton.disabled = !runtime.activeTurnId;
+  els.stopButton.hidden = !runtime.activeTurnId;
   els.composerHint.textContent = runtime.activeTurnId ? "Steer active turn" : "Start next turn";
   renderApprovals(runtime.pendingApprovals);
   renderChangedFiles(runtime.changedFiles);
@@ -301,7 +302,14 @@ function renderChangedFiles(files) {
 
 function renderItems(items) {
   els.itemStream.replaceChildren();
-  const visible = items.slice(-30);
+  const visible = items.filter(isChatItem).filter((item) => itemText(item).trim()).slice(-60);
+
+  if (!visible.length) {
+    els.itemStream.append(
+      createEmptyNotice("No chat messages yet", "Send a message from the composer to continue this thread."),
+    );
+    return;
+  }
 
   for (const item of visible) {
     const card = document.createElement("section");
@@ -310,14 +318,19 @@ function renderItems(items) {
 
     const meta = document.createElement("div");
     meta.className = "item-meta";
-    meta.textContent = item.type;
+    meta.textContent = itemLabel(item);
 
-    const body = document.createElement("pre");
+    const body = document.createElement("div");
+    body.className = "message-body";
     body.textContent = itemText(item);
 
     card.append(meta, body);
     els.itemStream.append(card);
   }
+
+  requestAnimationFrame(() => {
+    els.itemStream.scrollTop = els.itemStream.scrollHeight;
+  });
 }
 
 async function api(path, options = {}) {
@@ -534,11 +547,35 @@ function itemText(item) {
   if (item.type === "agentMessage" || item.type === "plan") return item.text || "";
   if (item.type === "reasoning") return (item.summary || item.content || []).join("\n");
   if (item.type === "commandExecution") {
-    const output = item.aggregatedOutput ? `\n\n${item.aggregatedOutput}` : "";
-    return `${item.command || ""}${output}`;
+    const status = item.status ? `Status: ${item.status}` : "";
+    const exit = Number.isInteger(item.exitCode) ? `Exit: ${item.exitCode}` : "";
+    const output = summarizeToolOutput(item.aggregatedOutput);
+    return [item.command || "Command", status, exit, output].filter(Boolean).join("\n");
   }
   if (item.type === "fileChange") return JSON.stringify(item.changes || [], null, 2);
   return JSON.stringify(item, null, 2);
+}
+
+function isChatItem(item) {
+  return item.type === "userMessage" || item.type === "agentMessage" || item.type === "plan";
+}
+
+function itemLabel(item) {
+  if (item.type === "userMessage") return "You";
+  if (item.type === "plan") return "Plan";
+  return "Codex";
+}
+
+function summarizeToolOutput(output) {
+  if (!output) return "";
+  const normalized = String(output).replace(/\s+\n/g, "\n").trim();
+  if (!normalized) return "";
+
+  if (/^\s*<(!doctype|html|head|body|meta|title|link)\b/i.test(normalized)) {
+    return "Output: HTML document";
+  }
+
+  return `Output: ${truncate(normalized, 900)}`;
 }
 
 function truncate(text, length) {
