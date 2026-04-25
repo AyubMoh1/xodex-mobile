@@ -5,7 +5,7 @@ const state = {
   events: null,
 };
 
-const APP_MARKER = "sidebar-v2";
+const APP_MARKER = "mobile-v3";
 
 const els = {
   workspace: document.querySelector("#workspace"),
